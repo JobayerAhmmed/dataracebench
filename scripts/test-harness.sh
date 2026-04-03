@@ -86,7 +86,7 @@ LLOV_COMPILE_FLAGS+=" ${OPTIMIZATION} -g"
 FLANG_PATH=/home/llvm/installs/flang-2020-03-16
 
 ARCHER=${ARCHER:-"clang-archer"}
-ARCHER_COMPILE_FLAGS="${OPTIMIZATION} -larcher"
+ARCHER_COMPILE_FLAGS="-O3 -fopenmp -fsanitize=thread -g -fno-omit-frame-pointer"
 
 INSPECTOR=${INSPECTOR:-"inspxe-cl"}
 ICC_COMPILE_FLAGS="${OPTIMIZATION} -fopenmp -std=c99 -qopenmp-offload=host -g"
@@ -361,7 +361,7 @@ for tool in "${TOOLS[@]}"; do
         clang)      ${CLANGXX} -fopenmp -g $additional_compile_flags $test -o $exname -lm ;;
         intel)      icpc $ICPC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         helgrind)   g++ $VALGRIND_COMPILE_CPP_FLAGS $additional_compile_flags $test -o $exname -lm ;;
-        archer)     clang-archer++ $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
+        archer)     clang++ $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         coderrect)  coderrect -XbcOnly clang++ -fopenmp -fopenmp-version=45 -g ${OPTIMIZATION} $additional_compile_flags $test -o $exname -lm > /dev/null 2>&1 ;;
         openrace)   ${CLANGXX} -fopenmp -fopenmp-version=45 -Dmasked=master -g -S -emit-llvm $test -o $exname ;;
         tsan-clang) ${CLANGXX} $TSAN_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
@@ -378,7 +378,7 @@ for tool in "${TOOLS[@]}"; do
         clang)      ${CLANG} -fopenmp -g $additional_compile_flags $test -o $exname -lm ;;
         intel)      icc $ICC_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         helgrind)   gcc $VALGRIND_COMPILE_C_FLAGS $additional_compile_flags $test -o $exname -lm ;;
-        archer)     clang-archer $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
+        archer)     clang $ARCHER_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
         coderrect)  coderrect -XbcOnly clang -fopenmp -fopenmp-version=45 -g ${OPTIMIZATION} $additional_compile_flags $test -o $exname -lm  > /dev/null 2>&1 ;;
         openrace)   ${CLANG} -fopenmp -fopenmp-version=45 -Dmasked=master -g -S -emit-llvm $test -o $exname ;;
         tsan-clang) ${CLANG} $TSAN_COMPILE_FLAGS $additional_compile_flags $test -o $exname -lm ;;
@@ -446,7 +446,7 @@ for tool in "${TOOLS[@]}"; do
                 races=$(grep -ce 'Possible data race' tmp.log) 
                 cat tmp.log >> "$LOG_DIR/$logname" || >tmp.log ;;
               archer)
-                $TIMEOUTCMD $TIMEOUTMIN"m" $MEMCHECK -f "%M" -o "$MEMLOG" "./$exname" $size &> tmp.log;
+                $TIMEOUTCMD $TIMEOUTMIN"m" $MEMCHECK -f "%M" -o "$MEMLOG" env TSAN_OPTIONS="ignore_noninstrumented_modules=1" ARCHER_OPTIONS="verbose=1" "./$exname" $size &> tmp.log;
                 check_return_code $?;
 		echo "$testname return $testreturn"
                 races=$(grep -ce 'WARNING: ThreadSanitizer: data race' tmp.log) 
@@ -501,7 +501,7 @@ for tool in "${TOOLS[@]}"; do
             esac
             end=$(date +%s%6N)
             elapsedtime=$(echo "scale=3; ($end-$start)/1000000"|bc)
-            mem=$(cat $MEMLOG)
+            mem=$(tail -n 1 "$MEMLOG" | grep -oE '^[0-9]+')
             echo "$tool,$id,\"$testname\",$haverace,$thread,${size:-"N/A"},${races:-0},$elapsedtime,$mem,$compilereturn,$testreturn" >> "$file"
             ITER_INDEX=$((ITER_INDEX+1))
           done
