@@ -92,8 +92,11 @@ INSPECTOR=${INSPECTOR:-"inspxe-cl"}
 ICC_COMPILE_FLAGS="${OPTIMIZATION} -fopenmp -std=c99 -qopenmp-offload=host -g"
 ICPC_COMPILE_FLAGS="${OPTIMIZATION} -fopenmp -qopenmp-offload=host -g"
 
-ROMP_CPP_COMPILE_FLAGS="${OPTIMIZATION} -g -std=c++11 -fopenmp -lomp"
-ROMP_C_COMPILE_FLAGS="${OPTIMIZATION} -g -fopenmp -lomp"
+# OpenMP path for ROMP in container
+# https://hub.docker.com/layers/peihunglin/dataracebench/romp
+ROMP_OMP="/home/drb/spack/opt/spack/linux-ubuntu18.04-haswell/gcc-7.5.0/llvm-openmp-romp-mod-ihx4vab7ihmid6fqzpeg5pocif7vjfnh"
+ROMP_CPP_COMPILE_FLAGS="-O3 -g -std=c++11 -fopenmp -I${ROMP_OMP}/include -L${ROMP_OMP}/lib -lomp"
+ROMP_C_COMPILE_FLAGS="-O3 -g -fopenmp -I${ROMP_OMP}/include -L${ROMP_OMP}/lib -lomp"
 
 FORTRAN_LINK_FLAGS="-ffree-line-length-none -fopenmp -c -fsanitize=thread"
 FORTRAN_COMPILE_FLAGS="${OPTIMIZATION} -fopenmp -fsanitize=thread -lgfortran"
